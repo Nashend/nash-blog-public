@@ -1,0 +1,100 @@
+﻿@page "/{categorySlug}-posts"
+@using NashBlog.Data.Entities
+
+@inject NavigationManager NavigationManager
+@inject IBlogPostService BlogPostService
+@inject ICategoryService CategoryService
+
+<PageTitle>@Utils.GetPageTitle(_category?.Name + " Posts")</PageTitle>
+
+<div class="container mt-5 mb-5">
+	<div class="row">
+		<div class="col-md-8">
+			@if(HasPosts)
+			{
+				<h5 class="font-weight-bold spanborder"><span>Featured in @_category?.Name</span></h5>
+				<div class="card border-0 mb-5 box-shadow">
+					<div style="background-image: url(@_featuredPost.Image); height: 350px; background-size: cover; background-repeat: no-repeat;">
+					</div>
+					<div class="card-body px-0 pb-0 d-flex flex-column align-items-start">
+						<h2 class="h2 font-weight-bold">
+							<a class="text-dark" href="posts/@_featuredPost.Slug">@_featuredPost.Title</a>
+						</h2>
+						<p class="card-text">
+							@_featuredPost.Introduction
+						</p>
+						<div>
+							<small class="d-block">@_featuredPost.User.Name</small>
+							<small class="text-muted">@_featuredPost.PublishedAt.ToDisplay()</small>
+						</div>
+					</div>
+				</div>
+				<h5 class="font-weight-bold spanborder"><span>Latest</span></h5>
+				<BlogPostsList Posts="_recentPosts" />
+
+				<hr/>
+				<div>
+					<a href="@CategorySlug-posts/all" class="btn btn-sm btn-outline-primary float-right" style="margin-bottom: 1rem;">All @_category?.Name Posts</a>
+				</div>
+				<hr style="clear: right;"/>
+			}
+			else
+			{
+				<h5 class="font-weight-bold spanborder"><span>@_category?.Name</span></h5>
+				<div class="card border-0 mb-5 box-shadow">
+					<p class="p-3 text-center font-weight-bold" style="font-size: 20px;">There are no posts under @_category?.Name yet :(</p>
+				</div>
+			}
+		</div>
+
+		@if(HasPosts) 
+		{
+			<div class="col-md-4 pl-4">
+			<div class="sticky-top">
+				<h5 class="font-weight-bold spanborder"><span>Popular in @_category?.Name</span></h5>
+				<PopularBlogPostsList Posts="_popularPosts" />
+			</div>
+		</div>
+		}
+
+	</div>
+</div>
+
+<div class="container pt-4 pb-4">
+	<SubscribeBox />
+</div>
+
+@code {
+	[Parameter]
+	public string CategorySlug { get; set; }
+
+	private Category _category;
+
+	private BlogPost? _featuredPost;
+	private BlogPost[] _popularPosts = [];
+	private BlogPost[] _recentPosts = [];
+
+	private bool HasPosts => _featuredPost is not null; // Featured is null ? then we know there are no featured posts in this category yet.
+
+	protected override async Task OnInitializedAsync()
+	{
+		var category = await CategoryService.GetCategoryBySlugAsync(CategorySlug);
+		if (category is null)
+		{
+			NavigationManager.NavigateTo("/", replace: true);
+			return;
+		}
+
+		_category = category;
+
+		var posts = await Task.WhenAll(
+			BlogPostService.GetFeaturedBlogPostsAsync(1, _category.Id),
+			BlogPostService.GetPopularBlogPostsAsync(4, _category.Id),
+			BlogPostService.GetRecentBlogPostsAsync(5, _category.Id)
+		);
+
+		_featuredPost = posts[0].FirstOrDefault();
+		_popularPosts = posts[1];
+		_recentPosts = posts[2];
+	}
+}

@@ -1,0 +1,120 @@
+﻿@page "/admin/manage-categories"
+@using NashBlog.Data.Entities
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@inject ICategoryService CategoryService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@Utils.GetPageTitle("Manage Categories")</PageTitle>
+
+<AdminHeader Title="Manage Categories">
+    <ActionButtons>
+        <button type="button" class="btn btn-sm btn-primary" @onclick="() => _operatingCategory = new()">+ Add New Category</button>
+    </ActionButtons>
+</AdminHeader>
+
+@if(_isLoading)
+{
+    <Loader LoaderText="@_loadingText"/>
+}
+
+
+
+@if(_operatingCategory is not null) 
+{
+    <div class="row">
+        <div class="col-sm-6"></div>
+        <div class="col-sm-6">
+            <EditForm Model="_operatingCategory" OnValidSubmit="SaveCategoryAsync">
+                <DataAnnotationsValidator />
+                <div class="shadow p-3" style="display: grid; grid-template-columns: auto 150px; grid-column-gap: 15px;">
+                    <div>
+                        <label class="form-label">Category Name</label>
+                        <InputText @bind-Value="_operatingCategory.Name" class="form-control form-control-sm" placeholder="Category name" />
+                        <ValidationMessage For="() => _operatingCategory.Name" />
+                        <label class="form-label mt-2">
+                            <InputCheckbox @bind-Value="_operatingCategory.ShowOnNavbar" />
+                            Show on Navbar
+                        </label>
+                    </div>
+                    <div class="d-flex flex-column">
+                        <button type="submit" class="btn btn-sm btn-success mb-2">Save</button>
+                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => _operatingCategory = null">Cancel</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<QuickGrid Items="@_categories" class="table table-bordered table-striped table-hover">
+    <PropertyColumn Property="@(c => c.Id)"/>
+    <PropertyColumn Property="@(c => c.Name)"/>
+    <PropertyColumn Property="@(c => c.Slug)"/>
+    <TemplateColumn Title="Show on Navbar">
+        @if(context.ShowOnNavbar)
+        {
+            <label class="text-success">
+                <input type="checkbox" @onchange="@(() => HandleShowOnNavbarChanged(context))" checked /> Yes
+            </label>
+        }
+        else
+        {
+            <label class="text-danger">
+                <input type="checkbox" @onchange="@(() => HandleShowOnNavbarChanged(context))" /> No
+            </label>
+        }
+    </TemplateColumn>
+    <TemplateColumn Title="Action">
+        <button type="button" class="btn btn-sm btn-primary" @onclick="() => HandleEditCategory(context)">Edit</button>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private bool _isLoading;
+    private string? _loadingText;
+
+    private Category? _operatingCategory;
+
+    private IQueryable<Category> _categories = Enumerable.Empty<Category>().AsQueryable();
+    protected override async Task OnInitializedAsync() => await LoadCategoriesAsync();
+
+    private async Task LoadCategoriesAsync()
+    {
+        _isLoading = true;
+        _loadingText = "Fetching categories...";
+        _categories = (await CategoryService.GetCategoriesAsync()).AsQueryable();
+        _isLoading = false;
+    }
+
+    private async Task HandleShowOnNavbarChanged(Category category)
+    {
+        _loadingText = "Saving changes...";
+        _isLoading = true;
+        category.ShowOnNavbar = !category.ShowOnNavbar;
+        await CategoryService.SaveCategoryAsync(category);
+        _isLoading = false;
+        NavigationManager.Refresh();
+    }
+
+    private void HandleEditCategory(Category category)
+    {
+        _operatingCategory = category.Clone();
+    }
+
+    private async Task SaveCategoryAsync()
+    {
+        if(_operatingCategory is not null)
+        {
+            _loadingText = "Saving changes...";
+            _isLoading = true;
+            await CategoryService.SaveCategoryAsync(_operatingCategory);
+            _operatingCategory = null;
+            _isLoading = false;
+
+            await LoadCategoriesAsync();
+        }
+    }
+}

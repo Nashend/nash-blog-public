@@ -1,0 +1,23 @@
+﻿@using NashBlog.Data.Entities
+
+
+<ol class="list-featured">
+	@foreach(var post in Posts)
+	{
+		<li>
+			<span>
+				<h6 class="font-weight-bold">
+					<a href="posts/@post.Slug" class="text-dark">@post.Title</a>
+				</h6>
+				<p class="text-muted">
+					@post.User.Name in <a href="@post.Category.Slug-posts" title="@post.Category.Name Posts">@post.Category.Name</a>
+				</p>
+			</span>
+		</li>
+	}
+</ol>
+
+@code {
+	[Parameter, EditorRequired]
+	public BlogPost[] Posts { get; set; }
+}

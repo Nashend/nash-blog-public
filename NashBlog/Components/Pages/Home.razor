@@ -1,0 +1,75 @@
+﻿@page "/"
+@using NashBlog.Data.Entities
+
+@inject IBlogPostService BlogPostService
+
+<PageTitle>@Utils.GetPageTitle("Home")</PageTitle>
+
+<!--------------------------------------
+HEADER
+--------------------------------------->
+@if(_firstFeaturedPost is not null)
+{
+	<div class="container">
+		<div class="jumbotron jumbotron-fluid mb-3 pt-0 pb-0 bg-lightblue position-relative">
+			<div class="pl-4 pr-0 h-100 tofront">
+				<div class="row justify-content-between">
+					<div class="col-md-6 pt-6 pb-6 align-self-center">
+						<h1 class="secondfont mb-3 font-weight-bold">@_firstFeaturedPost.Title</h1>
+						<p class="mb-3">
+							@_firstFeaturedPost.Introduction
+						</p>
+						<a href="posts/@_firstFeaturedPost.Slug" class="btn btn-dark">Read More</a>
+					</div>
+					<div class="col-md-6 d-none d-md-block pr-0" style="background-size:cover;background-image:url(@_firstFeaturedPost.Image);">	</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+<!-- End Header -->
+<!--------------------------------------
+MAIN
+--------------------------------------->
+
+<div class="container pt-4 pb-4">
+	<FeaturedBlogPostsList Posts="_featuredPosts" />
+</div>
+
+<div class="container">
+	<div class="row justify-content-between">
+		<div class="col-md-8">
+			<h5 class="font-weight-bold spanborder"><span>Recent Posts</span></h5>
+			<BlogPostsList Posts="_recentPosts" />
+		</div>
+		<div class="col-md-4 pl-4">
+			<h5 class="font-weight-bold spanborder"><span>Popular Posts</span></h5>
+			<PopularBlogPostsList Posts="_popularPosts" />
+		</div>
+	</div>
+</div>
+
+
+@code {
+	private BlogPost[] _featuredPosts = [];
+	private BlogPost[] _popularPosts = [];
+	private BlogPost[] _recentPosts = [];
+
+	private BlogPost _firstFeaturedPost = default!;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var posts = await Task.WhenAll(
+			BlogPostService.GetFeaturedBlogPostsAsync(5),
+			BlogPostService.GetPopularBlogPostsAsync(4),
+			BlogPostService.GetRecentBlogPostsAsync(5)
+		);
+
+		_featuredPosts = posts[0];
+		_popularPosts = posts[1];
+		_recentPosts = posts[2];
+
+		_firstFeaturedPost = _featuredPosts[0];
+		_featuredPosts = _featuredPosts.Skip(1).ToArray(); // skipping the first item (it is shown here on the home component)
+	}
+}

@@ -1,0 +1,21 @@
+﻿@page "/admin/dashboard"
+
+<PageTitle>@Utils.GetPageTitle("Dashboard")</PageTitle>
+
+<AdminHeader Title="Dashboard" />
+
+<AuthorizeView>
+    <Authorized>
+        <div class="text-center">
+            <p class="p-5">
+                <h2>Hello, @context.User.GetUserName()</h2>
+                <br/>
+                <h3>Welcome to the administration panel!</h3>
+            </p>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+
+}

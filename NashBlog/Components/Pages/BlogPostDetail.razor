@@ -1,0 +1,77 @@
+﻿@page "/posts/{blogPostSlug}"
+@using NashBlog.Data.Entities
+@using System.Web
+
+@inject NavigationManager NavigationManager
+@inject IBlogPostService BlogPostService
+
+<PageTitle>@Utils.GetPageTitle(_blogPost.Title ?? "")</PageTitle>
+
+@if (_blogPost.Id > 0)
+{
+	<div class="container">
+		<div class="jumbotron jumbotron-fluid mb-3 pl-0 pt-0 pb-0 bg-white position-relative">
+			<div class="h-100 tofront">
+				<div class="row justify-content-between">
+					<div class="col-md-6 pt-6 pb-6 pr-6 align-self-center">
+						<p class="text-uppercase font-weight-bold">
+							<a class="text-danger" href="@_blogPost.Category.Slug-posts">@_blogPost.Category.Name</a>
+						</p>
+						<h1 class="display-4 secondfont mb-3 font-weight-bold">@_blogPost.Title</h1>
+						<p class="mb-3">
+							@_blogPost.Introduction
+						</p>
+						<div class="d-flex align-items-center">
+							<img class="rounded-circle" src="https://ui-avatars.com/api/?name=@(HttpUtility.UrlEncode(_blogPost.User.Name))&background=random" width="70">
+							<small class="ml-2">
+								@_blogPost.User.Name <span class="text-muted d-block">@_blogPost.PublishedAt.ToDisplay()</span>
+							</small>
+						</div>
+					</div>
+					<div class="col-md-6 pr-0">
+						<img src="@_blogPost.Image">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+	<div class="container pt-4 pb-4">
+		<div class="row justify-content-center">
+			<div class="col-md-12">
+				<article class="article-post">
+					@((MarkupString)_blogPost.Content)
+				</article>
+				<SubscribeBox />
+			</div>
+		</div>
+	</div>
+
+	<div class="container pt-4 pb-4">
+		<h5 class="font-weight-bold spanborder"><span>Read next</span></h5>
+		<FeaturedBlogPostsList Posts="_relatedPosts" />
+	</div>
+}
+
+@code {
+	[Parameter]
+	public string BlogPostSlug { get; set; }
+
+	private BlogPost _blogPost = new();
+	private BlogPost[] _relatedPosts = [];
+
+	protected override async Task OnInitializedAsync()
+	{
+		var result = await BlogPostService.GetBlogPostBySlugAsync(BlogPostSlug);
+		if(result.IsEmpty)
+		{
+			// invalid URL
+			NavigationManager.NavigateTo("/", replace: true);
+			return;
+		}
+
+		_blogPost = result.BlogPost;
+		_relatedPosts = result.RelatedPosts;
+	}
+}

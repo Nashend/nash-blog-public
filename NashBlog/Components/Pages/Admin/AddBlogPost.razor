@@ -1,0 +1,292 @@
+﻿@page "/admin/manage-blog-posts/new"
+@page "/admin/manage-blog-posts/edit/{id:int?}"
+
+@using NashBlog.Data.Entities
+@using Blazored.TextEditor
+
+@rendermode InteractiveServer
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IWebHostEnvironment WebHostEnvironment
+@inject NavigationManager NavigationManager
+@inject IBlogPostsAdminService BlogPostsService
+@inject ICategoryService CategoryService
+
+<PageTitle>
+    @Utils.GetPageTitle(PageTitle)
+</PageTitle>
+
+<HeadContent>
+    <link href="//cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+    <link href="//cdn.quilljs.com/1.3.6/quill.bubble.css" rel="stylesheet" />
+</HeadContent>
+<Microsoft.AspNetCore.Components.Sections.SectionContent SectionName="scripts">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script src="_content/Blazored.TextEditor/quill-blot-formatter.min.js"></script>
+    <script src="_content/Blazored.TextEditor/Blazored-BlazorQuill.js"></script>
+</Microsoft.AspNetCore.Components.Sections.SectionContent>
+
+
+<AdminHeader Title="@PageTitle">
+    <ActionButtons>
+        <button type="button" @onclick="NavigateBack" class="btn btn-sm btn-primary">← Back</button>
+    </ActionButtons>
+</AdminHeader>
+
+@if (_isLoading)
+{
+    <Loader LoaderText="@_loadingText" />
+}
+
+<EditForm Model="@_model" OnValidSubmit="AddBlogPostAsync">
+    <DataAnnotationsValidator />
+    <div class="row mt-3">
+        <!-- LEFT SECTION -->
+        <div class="col-sm-6">
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <InputText @bind-Value="_model.Title" class="form-control form-control-sm" placeholder="Blog post title" />
+                <ValidationMessage For="() => _model.Title" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Category</label>
+                <InputSelect @bind-Value="_model.CategoryId" class="form-control form-control-sm">
+                    <option value="0">Select category</option>
+                    @foreach(var c in _categories)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => _model.CategoryId" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Introduction</label>
+                <InputText @bind-Value="_model.Introduction" class="form-control form-control-sm" placeholder="Blog post introduction" />
+                <ValidationMessage For="() => _model.Introduction" class="text-danger" />
+            </div>
+            @if(!string.IsNullOrWhiteSpace(_imageUrl))
+            {
+                <div class="mb-3">
+                    <img src="@_imageUrl" style="height: 200px;" />
+                </div>
+            }
+            <div class="mb-3">
+                <label class="form-label d-block">Upload Image</label>
+                <InputFile OnChange="HandleImageUploadAsync" />
+            </div>
+            <div class="mb-3 ml-3">
+                <label class="form-label">
+                    <InputCheckbox @bind-Value="_model.IsFeatured" class="form-check-input" />
+                    Featured?
+                </label>
+                <label class="form-label ml-3">
+                    <InputCheckbox @bind-Value="_model.IsPublished" />
+                    Published?
+                </label>
+            </div>
+            @if(!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <div class="mb-3">
+                    <p class="text-danger">@_errorMessage</p>
+                </div>
+            }
+            <div class="mb-3">
+                <button type="submit" class="btn btn-success">Save</button>
+            </div>
+        </div>
+
+        <!-- RIGHT SECTION (TEXT EDITOR) -->
+        <div class="col-sm-6 d-flex">
+            <div class="mb-3 flex-grow-1">
+                <label class="form-label">Content: </label>
+
+                <BlazoredTextEditor @ref="@quillHtml" Placeholder="Enter content...">
+                    <ToolbarContent>
+                        <select class="ql-header">
+                            <option selected=""></option>
+                            <option value="1"></option>
+                            <option value="2"></option>
+                            <option value="3"></option>
+                            <option value="4"></option>
+                            <option value="5"></option>
+                        </select>
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                            <button class="ql-strike"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <select class="ql-color"></select>
+                            <select class="ql-background"></select>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="ordered"></button>
+                            <button class="ql-list" value="bullet"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-link"></button>
+                        </span>
+                    </ToolbarContent>
+                    <EditorContent>
+                        @((MarkupString)_model.Content)
+                    </EditorContent>
+                </BlazoredTextEditor>
+
+                <ValidationMessage For="()=> _model.Content" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; } // ID of Blog post in case we are in edit mode and not new
+
+    private string PageTitle => Id.HasValue && Id > 0 ? "Edit Blog Post" : "Create new Blog Post";
+
+    private bool _isLoading;
+    private string? _loadingText;
+
+    private BlogPost _model = new();
+    private Category[] _categories = [];
+
+    private BlazoredTextEditor? quillHtml;
+
+    private string? _imageUrl;
+    private IBrowserFile? _imageToUpload;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await CategoryService.GetCategoriesAsync();
+
+        if(Id.HasValue && Id > 0)
+        {
+            var blogPost = await BlogPostsService.GetBlogPostByIdAsync(Id.Value);
+            if (blogPost is null)
+            {
+                NavigationManager.NavigateTo("/admin/manage-blog-posts", replace: true);
+                return;
+            }
+
+            _model = blogPost;
+            _imageUrl = blogPost.Image;
+        }
+    }
+
+    private async Task PreviewImageAsync(IBrowserFile file)
+    {
+        var extension = Path.GetExtension(file.Name)[1..]; // Path.GetExtension returns something like ".png" -> we don't need the dot
+        using var imageStream = file.OpenReadStream();
+        using MemoryStream ms = new();
+        await imageStream.CopyToAsync(ms);
+
+        // data:image/type;base64,contentOfTheImage
+        _imageUrl = $"data:image/{extension};base64,{Convert.ToBase64String(ms.ToArray())}";
+    }
+
+    private async Task HandleImageUploadAsync(InputFileChangeEventArgs e)
+    {
+        await PreviewImageAsync(e.File);
+        _imageToUpload = e.File;
+    }
+
+    private async Task<string?> SaveImageToDiskAsync(IBrowserFile browserFile)
+    {
+        var randomFileName = Path.GetRandomFileName();
+        var extension = Path.GetExtension(browserFile.Name);
+
+        // .../wwwroot/images/posts
+        var folderPath = Path.Combine(WebHostEnvironment.WebRootPath, "images", "posts");
+        Directory.CreateDirectory(folderPath);
+
+        var fileNamePath = Path.Combine("images", "posts", randomFileName + extension);
+        var fullPath = Path.Combine(WebHostEnvironment.WebRootPath, fileNamePath);
+        await using FileStream fs = new FileStream(fullPath, FileMode.Create);
+
+        try
+        {
+            await browserFile.OpenReadStream().CopyToAsync(fs);
+            return fileNamePath.Replace("\\", "/");
+
+        } catch (Exception e)
+        {
+            _errorMessage = e.Message;
+            fs.Close();
+            return null;
+        }
+    }
+
+    private void DeleteExistingImage(string imageUrl)
+    {
+        var imagePath = imageUrl.Replace("/", "\\");
+        var fullPath = Path.Combine(WebHostEnvironment.WebRootPath, imagePath);
+        try
+        {
+            File.Delete(fullPath);
+        }
+        catch{}
+    }
+
+    private async Task AddBlogPostAsync()
+    {
+        try
+        {
+            var content = await quillHtml!.GetHTML();
+            if (string.IsNullOrEmpty(content))
+            {
+                _errorMessage = "Content is required.";
+                return;
+            }
+
+            _loadingText = "Adding blog post...";
+            _isLoading = true;
+
+            _model.Content = content;
+
+            string? _imageUrlToDelete = null; // when a post's image is edited, this variable is used to delete the last image used
+            if (_imageToUpload is not null)
+            {
+                string? imagePath = await SaveImageToDiskAsync(_imageToUpload);
+                if (imagePath is null)
+                    return;
+
+                if (_model.Id > 0 && !string.IsNullOrWhiteSpace(_model.Image))
+                {
+                    // Edit mode
+                    if (_imageUrlToDelete is null)
+                    {
+                        _imageUrlToDelete = _model.Image;
+                    }
+                }
+
+                _model.Image = imagePath;
+            }
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync(); // retrieving the user
+            await BlogPostsService.SaveBlogPostAsync(_model, authState.User.GetUserId());
+
+            if(_imageUrlToDelete is not null)
+            {
+                // Image has been changed for this blog post, need to remove the existing image from disk
+                DeleteExistingImage(_imageUrlToDelete);
+            }
+
+            _imageToUpload = null;
+            NavigateBack(); // returning in the Manage Blog Posts page after we have added a blog page successfully
+            await Task.Delay(1000);
+            return;
+        }
+        catch(Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _isLoading = false;
+        }
+    }
+
+    private void NavigateBack()
+    {
+        NavigationManager.NavigateTo("/admin/manage-blog-posts");
+    }
+}

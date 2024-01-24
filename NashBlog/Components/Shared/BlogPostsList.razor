@@ -1,0 +1,26 @@
+﻿@using NashBlog.Data.Entities
+
+
+@foreach(var post in Posts)
+{
+	<div class="mb-3 d-flex justify-content-between">
+		<div class="pr-3">
+			<h2 class="mb-1 h4 font-weight-bold">
+				<a class="text-dark" href="posts/@post.Slug">@post.Title</a>
+			</h2>
+			<p>
+				@post.Introduction
+			</p>
+			<div class="card-text text-muted small">
+				@post.User.Name in <a href="@post.Category.Slug-posts" title="@post.Category.Name Posts">@post.Category.Name</a>
+			</div>
+			<small class="text-muted">@post.PublishedAt.ToDisplay()</small>
+		</div>
+		<img height="120" width="120" style="object-fit: cover;" src="@post.Image">
+	</div>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public BlogPost[] Posts { get; set; }
+}

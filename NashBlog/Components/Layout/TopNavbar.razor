@@ -1,0 +1,61 @@
+﻿@using NashBlog.Data.Entities
+
+@inject ICategoryService CategoryService
+@inject IHostEnvironment Environment
+
+<nav class="topnav navbar navbar-expand-lg navbar-light bg-white fixed-top">
+<div class="container">
+	<a class="navbar-brand" href="/"><strong>Nash Blog</strong></a>
+	<button class="navbar-toggler collapsed" type="button" aria-controls="navbarColor02" aria-expanded="false" aria-label="Toggle navigation" onclick="toggleMenu(event)">
+	<span class="navbar-toggler-icon"></span>
+	</button>
+	<div class="navbar-collapse collapse" id="top-navbar-menus-wrapper" style="">
+		<ul class="navbar-nav mr-auto d-flex align-items-center">
+			<li class="nav-item">
+			<a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
+			</li>
+			@foreach(var c in _showCategories)
+			{
+				<li class="nav-item">
+						<a class="nav-link" href="@c.Slug-posts" title="@c.Name Posts">@c.Name</a>
+				</li>
+			}
+		</ul>
+		<ul class="navbar-nav ml-auto d-flex align-items-center">
+			<AuthorizeView>
+				<Authorized>
+					<li class="nav-item">
+						<a class="nav-link" href="admin/dashboard">@context.User.GetUserName()</a>
+					</li>
+					<li class="nav-item highlight">
+						<LogoutForm ButtonClasses="nav-link" />
+					</li>
+				</Authorized>
+				<NotAuthorized>
+					<li class="nav-item highlight">
+						<a class="nav-link" href="account/login">Login</a>
+					</li>
+				</NotAuthorized>
+			</AuthorizeView>
+		</ul>
+	</div>
+</div>
+</nav>
+
+@code {
+	private Category[] _showCategories = [];
+	private const int MAX_SHOW_CATEGORIES = 5;
+
+	protected override async Task OnInitializedAsync()
+	{
+		var categories = await CategoryService.GetCategoriesAsync();
+		_showCategories = categories.Where(c => c.ShowOnNavbar)
+									.Take(5)
+									.ToArray();
+
+		if(_showCategories.Length < MAX_SHOW_CATEGORIES)
+		{
+			_showCategories = [.. _showCategories, ..categories.Where(c => !c.ShowOnNavbar).Take(MAX_SHOW_CATEGORIES - _showCategories.Length).ToArray()];
+		}
+	}
+}

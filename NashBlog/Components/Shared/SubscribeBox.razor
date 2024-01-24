@@ -1,0 +1,62 @@
+﻿@using NashBlog.Data.Entities
+
+@attribute [StreamRendering]
+
+@inject ISubcribeService SubscribeService
+
+
+<div class="border p-5 bg-lightblue">
+	<div class="row justify-content-between">
+		<div class="col-md-6">
+			<h5 class="font-weight-bold secondfont">Become a member</h5>
+			Get the latest news right in your inbox. It's free and you can unsubscribe at any time. We hate spam as much as we do, so we never spam!
+		</div>
+		<div class="col-md-6">
+			<EditForm Model="Model" method="post" OnValidSubmit="SubscribeAsync" FormName="subscribe-form" Enhance>
+				<DataAnnotationsValidator />
+				<div class="row">
+					<div class="col-md-6">
+						<InputText @bind-Value="Model.Name" class="form-control" placeholder="Name" />
+						<ValidationMessage For="() => Model.Name" class="text-danger" />
+					</div>
+					<div class="col-md-6">
+						<InputText type="email" @bind-Value="Model.Email" class="form-control" placeholder="Email" />
+						<ValidationMessage For="() => Model.Email" class="text-danger" />
+					</div>
+					@if(!string.IsNullOrWhiteSpace(_message))
+					{
+						<div class="col-md-12">
+							<p class="m-0 p-0">@_message</p>
+						</div>
+					}
+					<div class="col-md-12 mt-3">
+						<button type="submit" class="btn btn-success btn-block">Subscribe</button>
+					</div>
+				</div>
+			</EditForm>
+		</div>
+	</div>
+</div>
+
+@code {
+	[SupplyParameterFromForm]
+	private Subscriber Model { get; set; } = new();
+
+	private string? _message;
+
+	private async Task SubscribeAsync()
+	{
+		_message = "Subscribing...";
+
+		var errorMessage = await SubscribeService.SuscribeAsync(Model);
+		if(errorMessage is not null)
+		{
+			_message = errorMessage;
+		}
+		else
+		{
+			_message = "Thank you for subscribing! :)";
+			Model = new();
+		}
+	}
+}
