@@ -8,13 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="StaticFiles\**" />
-    <Content Remove="StaticFiles\**" />
-    <EmbeddedResource Remove="StaticFiles\**" />
-    <None Remove="StaticFiles\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Blazored.TextEditor" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid" Version="8.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.1" />
