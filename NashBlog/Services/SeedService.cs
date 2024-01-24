@@ -18,7 +18,6 @@ namespace NashBlog.Services
 		private readonly UserManager<ApplicationUser> _userManager;
 		private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
-		//private readonly IBlogPostsAdminService _adminBlogPostService;
 
         public SeedService(ApplicationDbContext context, IUserStore<ApplicationUser> userStore,
 			UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration)
@@ -28,7 +27,6 @@ namespace NashBlog.Services
 			_userManager = userManager;
 			_roleManager = roleManager;
             _configuration = configuration;
-			//_adminBlogPostService = adminBlogPostService;
         }
 
 		private async Task MigrateDatabaseAsync()
@@ -87,19 +85,6 @@ namespace NashBlog.Services
 				await _context.Categories.AddRangeAsync(Category.GetSeedCategories());
 				await _context.SaveChangesAsync();
 			}
-
-
-
-			// Add first default blog post
-			/*BlogPost post = new();
-			post.Title = "Test";
-			post.Introduction = "Test";
-			post.Content = "Test";
-			post.CategoryId = 1;
-			post.IsPublished = true;
-			post.IsFeatured = true;
-			post.Image = "";
-			await _adminBlogPostService.SaveBlogPostAsync(post, "253069b4-60c4-46b9-bb2b-fcd86813333b");*/
 		}
 	}
 }
